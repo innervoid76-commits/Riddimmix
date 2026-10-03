@@ -7,7 +7,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AltRoute
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.BubbleChart
+import androidx.compose.material.icons.filled.Cable
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.SettingsInputComponent
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,10 +17,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.components.D3SignalFlowWebView
 import com.example.ui.components.InteractiveSignalFlowView
 import com.example.ui.components.RoutingNode
 import com.example.ui.theme.*
@@ -27,7 +30,9 @@ import com.example.ui.theme.*
 fun SignalFlowScreen(
     modifier: Modifier = Modifier
 ) {
+    var viewMode by remember { mutableStateOf(0) } // 0: D3 Interactive Graph, 1: Studio Bus Grid
     var selectedNodeState by remember { mutableStateOf<RoutingNode?>(null) }
+    var d3SelectedInfo by remember { mutableStateOf<String?>(null) }
 
     LazyColumn(
         modifier = modifier
@@ -46,31 +51,84 @@ fun SignalFlowScreen(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Multi-Stage Signal Flow & Stem Processing",
+                text = "Interactive D3 Signal Flow & Stem Processing",
                 color = TextPrimary,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Explore the exact routing pipeline from individual sound generators to submix buses, spatial stereo decoding, and mastering brickwall limiting.",
+                text = "Visualize the complete path from the 11 audio channels into the 8 mixbuses, the 4 spatial stem channels (Mid/Side/L/R), through the Pre-Master, and terminating into the 5-stage Master Chain.",
                 color = TextSecondary,
                 fontSize = 12.sp,
                 lineHeight = 16.sp
             )
         }
 
-        // Interactive Diagram Component
+        // View Mode Selector (D3 vs Bus Grid)
         item {
-            InteractiveSignalFlowView(
-                onSelectNode = { selectedNodeState = it }
-            )
+            TabRow(
+                selectedTabIndex = viewMode,
+                containerColor = DarkSurface,
+                contentColor = NeonGreen,
+                divider = { HorizontalDivider(color = DarkCardBorder) }
+            ) {
+                Tab(
+                    selected = viewMode == 0,
+                    onClick = { viewMode = 0 },
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.BubbleChart, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "D3.js Signal Graph",
+                                fontWeight = if (viewMode == 0) FontWeight.Bold else FontWeight.Normal,
+                                color = if (viewMode == 0) NeonGreen else TextSecondary
+                            )
+                        }
+                    },
+                    modifier = Modifier.testTag("tab_d3_view")
+                )
+                Tab(
+                    selected = viewMode == 1,
+                    onClick = { viewMode = 1 },
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Layers, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Studio Bus Columns",
+                                fontWeight = if (viewMode == 1) FontWeight.Bold else FontWeight.Normal,
+                                color = if (viewMode == 1) NeonCyan else TextSecondary
+                            )
+                        }
+                    },
+                    modifier = Modifier.testTag("tab_grid_view")
+                )
+            }
+        }
+
+        // Active Visualization Engine
+        if (viewMode == 0) {
+            item {
+                D3SignalFlowWebView(
+                    onNodeSelected = { id, name, desc ->
+                        d3SelectedInfo = "$name: $desc"
+                    }
+                )
+            }
+        } else {
+            item {
+                InteractiveSignalFlowView(
+                    onSelectNode = { selectedNodeState = it }
+                )
+            }
         }
 
         // Sidechain Routing Protocol
         item {
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("sidechain_protocol_card"),
                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
                 border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(DarkCardBorder))
             ) {

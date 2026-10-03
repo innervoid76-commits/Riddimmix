@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import com.example.model.MixbusConfig
 import com.example.model.SpatialBusConfig
 import com.example.ui.components.InteractiveStudioDial
+import com.example.ui.components.VisualStereoPhaseMeter
 import com.example.ui.theme.*
 
 @Composable
@@ -35,8 +36,10 @@ fun MixbusesScreen(
     spatialBuses: List<SpatialBusConfig>,
     selectedMixbusId: String,
     selectedSpatialBusId: String,
+    selectedPhaseBusId: String = "master",
     onSelectMixbus: (String) -> Unit,
     onSelectSpatialBus: (String) -> Unit,
+    onSelectPhaseBus: (String) -> Unit = {},
     getDialValue: (String, Float) -> Float,
     onUpdateDial: (String, Float) -> Unit,
     modifier: Modifier = Modifier
@@ -50,6 +53,15 @@ fun MixbusesScreen(
         contentPadding = PaddingValues(top = 16.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Visual Stereo Phase Correlation Meter
+        item {
+            VisualStereoPhaseMeter(
+                selectedBusId = selectedPhaseBusId,
+                onSelectBus = onSelectPhaseBus,
+                modifier = Modifier.testTag("mixbus_visual_phase_meter")
+            )
+        }
+
         // Toggle SubTab: 8 Mixbuses vs 4 Spatial Buses
         item {
             TabRow(
@@ -116,7 +128,10 @@ fun MixbusesScreen(
                                     color = if (isSelected) busColor else Color(0xFF222B3D),
                                     shape = RoundedCornerShape(8.dp)
                                 )
-                                .clickable { onSelectMixbus(bus.id) }
+                                .clickable { 
+                                    onSelectMixbus(bus.id)
+                                    onSelectPhaseBus(bus.id)
+                                }
                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                                 .testTag("mixbus_tab_${bus.id}")
                         ) {
@@ -309,7 +324,10 @@ fun MixbusesScreen(
                                     color = if (isSelected) accent else Color(0xFF222B3D),
                                     shape = RoundedCornerShape(8.dp)
                                 )
-                                .clickable { onSelectSpatialBus(sbus.id) }
+                                .clickable { 
+                                    onSelectSpatialBus(sbus.id)
+                                    onSelectPhaseBus(sbus.id)
+                                }
                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                                 .testTag("spatial_tab_${sbus.id}")
                         ) {

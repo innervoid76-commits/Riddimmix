@@ -10,6 +10,7 @@ object HtmlExportGenerator {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Professional Riddim Mixing & Mastering Guide (FL Studio 20 & FabFilter 2025)</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         :root {
             --bg-dark: #0b0e14;
@@ -234,6 +235,7 @@ object HtmlExportGenerator {
     <p>All individual channels are disconnected from the Master track and routed strictly into 8 designated Mixbuses, which feed the 4 Spatial Processing Channels (Mid, Side, Left, Right), summing into the Pre-Master, and terminating at the Final Master Chain.</p>
 
     <div class="diagram-box">
+        <h3>Static Signal Overview:</h3>
         <svg viewBox="0 0 1000 480" width="1000" height="480">
             <defs>
                 <linearGradient id="gradDrums" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -403,6 +405,18 @@ object HtmlExportGenerator {
             <!-- PreMaster to Master -->
             <path d="M 850 125 L 850 145" stroke="#ff9100" stroke-width="3" fill="none" marker-end="url(#arrow)" />
         </svg>
+    </div>
+
+    <h3>Interactive D3.js Signal Flow Graph (Click Nodes to Highlight Routing)</h3>
+    <div id="d3-chart-wrapper" style="position: relative; height: 560px; background: #0c0f17; border: 1px solid var(--border-color); border-radius: 12px; margin: 16px 0 32px 0; overflow: hidden;">
+        <div id="d3-controls" style="position: absolute; top: 12px; left: 12px; z-index: 10; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="tag-pill tag-mono" style="cursor: pointer; background: #1c2233; color: var(--neon-green); border: 1px solid var(--neon-green);" onclick="filterExportD3('all')">All Paths</button>
+            <button class="tag-pill" style="cursor: pointer; background: #1c2233; color: var(--neon-cyan); border: 1px solid var(--border-color);" onclick="filterExportD3('drums')">Drums & Sub</button>
+            <button class="tag-pill" style="cursor: pointer; background: #1c2233; color: var(--neon-pink); border: 1px solid var(--border-color);" onclick="filterExportD3('basses')">Basses & Growls</button>
+            <button class="tag-pill" style="cursor: pointer; background: #1c2233; color: var(--neon-orange); border: 1px solid var(--border-color);" onclick="filterExportD3('sidechain')">Sidechains Only</button>
+        </div>
+        <div id="d3-tooltip-exp" style="position: absolute; display: none; background: #171d2b; border: 1px solid var(--neon-cyan); border-radius: 8px; padding: 10px 14px; font-size: 11px; z-index: 50; pointer-events: none; max-width: 260px; box-shadow: 0 4px 12px rgba(0,0,0,0.6);"></div>
+        <div id="d3-svg-mount" style="width: 100%; height: 100%;"></div>
     </div>
 
     <h2>2. Channel-by-Channel Dial & Parameter Settings</h2>
@@ -663,6 +677,180 @@ object HtmlExportGenerator {
         <p>Riddim Master Engineering Suite &bull; Exported from FL Studio 20 &amp; FabFilter 2025 Architecture</p>
     </footer>
 </div>
+
+<script>
+// D3.js Signal Flow Graph Engine
+(function() {
+    if (typeof d3 === 'undefined') return;
+    const nodes = [
+        { id: "kick", name: "Kick (1)", layer: 0, cat: "drums", peak: "-6.0 dBFS", desc: "48Hz kick fundamental.", color: "#ef4444" },
+        { id: "snare", name: "Snare (2)", layer: 0, cat: "drums", peak: "-6.0 dBFS", desc: "210Hz body snap.", color: "#f59e0b" },
+        { id: "hihat", name: "HiHat (3)", layer: 0, cat: "drums", peak: "-14 dBFS", desc: "Top 16th groove.", color: "#10b981" },
+        { id: "cymbal", name: "Cymbal (4)", layer: 0, cat: "drums", peak: "-12 dBFS", desc: "Crash / ride.", color: "#10b981" },
+        { id: "perc", name: "Perc (5)", layer: 0, cat: "drums", peak: "-10 dBFS", desc: "Wood rim clicks.", color: "#10b981" },
+        { id: "sub", name: "Sub (6)", layer: 0, cat: "drums", peak: "-7.0 dBFS", desc: "30-85Hz Pure Mono.", color: "#00e5ff" },
+        { id: "midbass", name: "MidBass (7)", layer: 0, cat: "basses", peak: "-9.0 dBFS", desc: "480Hz honk.", color: "#ff4081" },
+        { id: "growl", name: "Growl (8)", layer: 0, cat: "basses", peak: "-8.0 dBFS", desc: "Screech chop.", color: "#ff4081" },
+        { id: "lead", name: "Lead (9)", layer: 0, cat: "synths", peak: "-10 dBFS", desc: "Laser stab.", color: "#38bdf8" },
+        { id: "pad", name: "Pad (10)", layer: 0, cat: "synths", peak: "-16 dBFS", desc: "Atmosphere bed.", color: "#64748b" },
+        { id: "vox", name: "Vox (11)", layer: 0, cat: "vox", peak: "-9.0 dBFS", desc: "Chant / toast.", color: "#ec4899" },
+
+        { id: "b_kick", name: "Kick Bus", layer: 1, cat: "drums", peak: "-5.8 dBFS", desc: "Mono center kick.", color: "#ef4444" },
+        { id: "b_snare", name: "Snare Bus", layer: 1, cat: "drums", peak: "-5.8 dBFS", desc: "Snare sum.", color: "#f59e0b" },
+        { id: "b_perc", name: "Perc Bus", layer: 1, cat: "drums", peak: "-9.0 dBFS", desc: "Tops glue.", color: "#10b981" },
+        { id: "b_sub", name: "Sub Bus", layer: 1, cat: "drums", peak: "-6.8 dBFS", desc: "Mono sub rail.", color: "#00e5ff" },
+        { id: "b_growl", name: "Growl Bus", layer: 1, cat: "basses", peak: "-7.5 dBFS", desc: "Riddim soundwall.", color: "#ff4081" },
+        { id: "b_synths", name: "Synth/Vox", layer: 1, cat: "synths", peak: "-9.0 dBFS", desc: "Leads/vox.", color: "#38bdf8" },
+
+        { id: "sp_mid", name: "MID BUS", layer: 2, cat: "spatial", peak: "-4.2 dBFS", desc: "Sum L+R mono core.", color: "#00e5ff" },
+        { id: "sp_side", name: "SIDE BUS", layer: 2, cat: "spatial", peak: "-8.5 dBFS", desc: "Diff L-R HP 135Hz.", color: "#00ffa3" },
+        { id: "sp_lr", name: "LEFT/RIGHT", layer: 2, cat: "spatial", peak: "-5.0 dBFS", desc: "Discrete monitors.", color: "#f59e0b" },
+
+        { id: "pm_pre", name: "PRE-MASTER", layer: 3, cat: "master", peak: "-3.5 dBFS", desc: "Multiband glue.", color: "#a855f7" },
+        { id: "m_clip", name: "Clipper", layer: 4, cat: "master", peak: "-0.8 dBFS", desc: "Shaves 2.4dB.", color: "#ff1744" },
+        { id: "m_l2", name: "Pro-L 2", layer: 4, cat: "master", peak: "-0.1 dBFS", desc: "-6.0 LUFS limiter.", color: "#00ffa3" },
+        { id: "out_drop", name: "-6 LUFS OUT", layer: 5, cat: "master", peak: "-6.0 LUFS", desc: "True Peak -0.1 dBFS.", color: "#00ffa3" }
+    ];
+
+    const links = [
+        { source: "kick", target: "b_kick", color: "#ef4444" },
+        { source: "snare", target: "b_snare", color: "#f59e0b" },
+        { source: "hihat", target: "b_perc", color: "#10b981" },
+        { source: "cymbal", target: "b_perc", color: "#10b981" },
+        { source: "perc", target: "b_perc", color: "#10b981" },
+        { source: "sub", target: "b_sub", color: "#00e5ff" },
+        { source: "midbass", target: "b_growl", color: "#ff4081" },
+        { source: "growl", target: "b_growl", color: "#ff4081" },
+        { source: "lead", target: "b_synths", color: "#38bdf8" },
+        { source: "pad", target: "b_synths", color: "#64748b" },
+        { source: "vox", target: "b_synths", color: "#ec4899" },
+
+        { source: "kick", target: "sub", color: "#ff9100", type: "sidechain" },
+        { source: "kick", target: "midbass", color: "#ff9100", type: "sidechain" },
+        { source: "snare", target: "growl", color: "#ff9100", type: "sidechain" },
+
+        { source: "b_kick", target: "sp_mid", color: "#ef4444" },
+        { source: "b_sub", target: "sp_mid", color: "#00e5ff" },
+        { source: "b_snare", target: "sp_mid", color: "#f59e0b" },
+        { source: "b_snare", target: "sp_side", color: "#f59e0b" },
+        { source: "b_perc", target: "sp_side", color: "#10b981" },
+        { source: "b_perc", target: "sp_lr", color: "#10b981" },
+        { source: "b_growl", target: "sp_mid", color: "#ff4081" },
+        { source: "b_growl", target: "sp_side", color: "#ff4081" },
+        { source: "b_synths", target: "sp_mid", color: "#38bdf8" },
+        { source: "b_synths", target: "sp_side", color: "#38bdf8" },
+
+        { source: "sp_mid", target: "pm_pre", color: "#00e5ff" },
+        { source: "sp_side", target: "pm_pre", color: "#00ffa3" },
+        { source: "sp_lr", target: "pm_pre", color: "#f59e0b" },
+
+        { source: "pm_pre", target: "m_clip", color: "#a855f7" },
+        { source: "m_clip", target: "m_l2", color: "#ff1744" },
+        { source: "m_l2", target: "out_drop", color: "#00ffa3" }
+    ];
+
+    const width = 1000;
+    const height = 540;
+    const layerX = [20, 200, 400, 600, 780, 920];
+
+    const layerCounts = {};
+    nodes.forEach(n => { layerCounts[n.layer] = (layerCounts[n.layer] || 0) + 1; });
+    const layerIdx = {};
+    nodes.forEach(n => {
+        const idx = layerIdx[n.layer] || 0;
+        layerIdx[n.layer] = idx + 1;
+        const total = layerCounts[n.layer];
+        n.x = layerX[n.layer];
+        const sp = Math.min(46, (height - 60) / (total + 1));
+        n.y = 50 + (idx + 1) * sp + ((height - 60) - (total * sp)) / 2;
+    });
+
+    const nodeMap = new Map(nodes.map(d => [d.id, d]));
+    const svg = d3.select("#d3-svg-mount")
+        .append("svg")
+        .attr("viewBox", `0 0 ${"$"}{width} ${"$"}{height}`)
+        .attr("width", "100%")
+        .attr("height", "100%");
+
+    const g = svg.append("g");
+    const linkGen = d3.linkHorizontal().x(d => d.x).y(d => d.y);
+
+    const linkEl = g.selectAll(".exp-link")
+        .data(links)
+        .enter()
+        .append("path")
+        .attr("class", d => "exp-link" + (d.type === 'sidechain' ? ' sidechain-link' : ''))
+        .attr("d", d => {
+            const s = nodeMap.get(d.source);
+            const t = nodeMap.get(d.target);
+            return linkGen({ source: { x: s.x + 85, y: s.y + 12 }, target: { x: t.x, y: t.y + 12 } });
+        })
+        .attr("stroke", d => d.color)
+        .attr("stroke-width", d => d.type === 'sidechain' ? 2 : 1.5)
+        .attr("fill", "none")
+        .attr("stroke-opacity", 0.4);
+
+    const nodeEl = g.selectAll(".exp-node")
+        .data(nodes)
+        .enter()
+        .append("g")
+        .attr("transform", function(d) { return "translate(" + d.x + ", " + d.y + ")"; })
+        .style("cursor", "pointer")
+        .on("click", (evt, d) => {
+            const conn = new Set([d.id]);
+            links.forEach(l => {
+                if (l.source === d.id) conn.add(l.target);
+                if (l.target === d.id) conn.add(l.source);
+            });
+            linkEl.attr("stroke-opacity", l => (l.source === d.id || l.target === d.id) ? 1 : 0.08)
+                  .attr("stroke-width", l => (l.source === d.id || l.target === d.id) ? 3 : 1);
+            nodeEl.select("rect").attr("fill", n => conn.has(n.id) ? "#1f293d" : "#141926");
+        })
+        .on("mouseover", (evt, d) => {
+            const tip = d3.select("#d3-tooltip-exp");
+            tip.style("display", "block")
+               .style("left", (evt.offsetX + 15) + "px")
+               .style("top", (evt.offsetY - 10) + "px")
+               .html("<strong>" + d.name + "</strong><br><span style='color:var(--neon-green)'>" + d.peak + "</span><br>" + d.desc);
+        })
+        .on("mouseout", () => d3.select("#d3-tooltip-exp").style("display", "none"));
+
+    nodeEl.append("rect")
+        .attr("width", 85)
+        .attr("height", 24)
+        .attr("rx", 5)
+        .attr("fill", "#141926")
+        .attr("stroke", d => d.color)
+        .attr("stroke-width", 1.5);
+
+    nodeEl.append("text")
+        .attr("x", 6)
+        .attr("y", 16)
+        .attr("fill", "#f1f5f9")
+        .attr("font-size", "10px")
+        .attr("font-weight", "600")
+        .text(d => d.name);
+
+    window.filterExportD3 = function(cat) {
+        if (cat === 'all') {
+            nodeEl.style("opacity", 1);
+            linkEl.style("opacity", 0.4).attr("stroke-width", 1.5);
+            return;
+        }
+        if (cat === 'sidechain') {
+            linkEl.style("opacity", l => l.type === 'sidechain' ? 1 : 0.05);
+            nodeEl.style("opacity", n => ['kick','sub','midbass','snare','growl'].includes(n.id) ? 1 : 0.2);
+            return;
+        }
+        nodeEl.style("opacity", n => (n.cat === cat || n.cat === 'master') ? 1 : 0.2);
+        linkEl.style("opacity", l => {
+            const s = nodeMap.get(l.source);
+            const t = nodeMap.get(l.target);
+            return (s.cat === cat || t.cat === cat || s.cat === 'master' || t.cat === 'master') ? 0.8 : 0.05;
+        });
+    };
+})();
+</script>
 </body>
 </html>
         """.trimIndent()

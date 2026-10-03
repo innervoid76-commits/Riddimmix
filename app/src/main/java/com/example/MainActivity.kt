@@ -93,8 +93,10 @@ class MainActivity : ComponentActivity() {
                                 spatialBuses = viewModel.spatialBuses,
                                 selectedMixbusId = uiState.selectedMixbusId,
                                 selectedSpatialBusId = uiState.selectedSpatialBusId,
+                                selectedPhaseBusId = uiState.selectedPhaseBusId,
                                 onSelectMixbus = { viewModel.selectMixbus(it) },
                                 onSelectSpatialBus = { viewModel.selectSpatialBus(it) },
+                                onSelectPhaseBus = { viewModel.selectPhaseBus(it) },
                                 getDialValue = { id, defaultVal -> viewModel.getDialValue(id, defaultVal) },
                                 onUpdateDial = { id, newVal -> viewModel.updateDial(id, newVal) }
                             )

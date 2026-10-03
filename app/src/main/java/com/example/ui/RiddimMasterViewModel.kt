@@ -39,7 +39,8 @@ data class UiState(
     val exportedHtmlFilePath: String? = null,
     val simulatedLufs: Float = -6.0f,
     val simulatedTruePeak: Float = -0.1f,
-    val simulatedCorrelation: Float = 0.88f
+    val simulatedCorrelation: Float = 0.88f,
+    val selectedPhaseBusId: String = "master"
 )
 
 class RiddimMasterViewModel : ViewModel() {
@@ -71,6 +72,10 @@ class RiddimMasterViewModel : ViewModel() {
 
     fun selectSpatialBus(busId: String) {
         _uiState.value = _uiState.value.copy(selectedSpatialBusId = busId)
+    }
+
+    fun selectPhaseBus(busId: String) {
+        _uiState.value = _uiState.value.copy(selectedPhaseBusId = busId)
     }
 
     fun updateDial(dialId: String, newValue: Float) {
