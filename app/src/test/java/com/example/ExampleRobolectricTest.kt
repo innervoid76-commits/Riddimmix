@@ -39,5 +39,8 @@ class ExampleRobolectricTest {
     assertTrue(html.contains("-0.1 dBFS"))
     assertTrue(html.contains("Neutron Clipper"))
     assertTrue(html.contains("FabFilter Pro-L 2"))
+
+    // Save to root for direct download in AI Studio file explorer
+    java.io.File("/app/applet/Riddim_Mixing_Mastering_FLStudio20_FabFilter2025.html").writeText(html)
   }
 }
