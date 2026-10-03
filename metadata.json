@@ -1,0 +1,6 @@
+{
+  "name": "Riddim Master",
+  "description": "FL Studio 20 Riddim mixing and mastering suite with FabFilter 2025 VST dials, M/S L/R routing, clipper & Pro-L 2 calibration to 6 LUFS.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
